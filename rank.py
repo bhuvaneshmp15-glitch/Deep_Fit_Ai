@@ -725,91 +725,66 @@ def _flatten_candidate(raw):
 
 
 def generate_reasoning(raw_candidate, score, rank):
-    """
-    Fact-specific reasoning generator.
-
-    Produces unique, grounded reasoning for each candidate using real profile
-    data. Passes all 6 Stage-4 evaluation checks:
-      - Specific facts (title, yoe, company, skills with months)
-      - JD connection (skills match what JD requires)
-      - Honest concerns (notice, passive status, low response rate)
-      - No hallucination (every fact pulled from candidate profile)
-      - Variation (every candidate gets unique text)
-      - Rank consistency (concerns only surfaced for rank > 10)
-    """
     p   = raw_candidate.get('profile') or {}
     sig = raw_candidate.get('redrob_signals') or {}
-
-    title   = p.get('current_title') or raw_candidate.get('current_title') or 'Professional'
-    yoe     = _f(p.get('years_of_experience') or raw_candidate.get('years_of_experience') or 0)
-    loc     = p.get('location') or raw_candidate.get('location') or 'Unknown'
-    company = p.get('current_company') or raw_candidate.get('current_company') or ''
-
-    response  = _f(sig.get('recruiter_response_rate') or
-                   raw_candidate.get('recruiter_response_rate') or 0.5)
-    notice    = _i(sig.get('notice_period_days') or
-                   raw_candidate.get('notice_period_days') or 30)
-    open_flag = bool(sig.get('open_to_work_flag') or
-                     raw_candidate.get('open_to_work') or False)
-    open_str  = 'actively looking' if open_flag else 'passive'
-
-    # -- Top-3 matched AI skills (sorted by JD weight) ------------------------
-    skill_lookup = {}
-    for s in (raw_candidate.get('skills') or []):
-        if isinstance(s, dict):
-            skill_lookup[s.get('name') or ''] = s
-
+    
+    title   = p.get('current_title') or 'Professional'
+    yoe     = _f(p.get('years_of_experience') or 0)
+    loc     = p.get('location') or 'Unknown'
+    company = p.get('current_company') or ''
+    response  = _f(sig.get('recruiter_response_rate') or 0.5)
+    notice    = _i(sig.get('notice_period_days') or 30)
+    open_flag = bool(sig.get('open_to_work_flag') or False)
+    
+    # Top-3 AI skills with proficiency + duration
+    skill_lookup = {s.get('name',''): s for s in (raw_candidate.get('skills') or []) if isinstance(s,dict)}
     matched = []
-    for skill_name, _weight in sorted(HARD_AI_SKILLS.items(), key=lambda x: -x[1]):
-        if skill_name in skill_lookup:
-            s    = skill_lookup[skill_name]
-            prof = s.get('proficiency') or s.get('proficiency_level') or 'intermediate'
-            dur  = _i(s.get('duration_months', 0))
-            matched.append(f"{skill_name} ({prof}, {dur}mo)")
-        if len(matched) >= 3:
-            break
-
+    for sn, w in sorted(HARD_AI_SKILLS.items(), key=lambda x: -x[1]):
+        if sn in skill_lookup:
+            s = skill_lookup[sn]
+            prof = s.get('proficiency','intermediate')
+            dur  = _i(s.get('duration_months',0))
+            matched.append(f"{sn} ({prof}, {dur}mo)")
+        if len(matched) >= 3: break
     skill_str = ', '.join(matched) if matched else 'limited AI skill match'
-
-    # -- Production signals from career descriptions --------------------------
-    career    = raw_candidate.get('career_history') or raw_candidate.get('experience') or []
-    desc_text = ' '.join((ch.get('description') or '') for ch in career[:2]).lower()
-
-    prod_signals = []
-    if 'production'  in desc_text: prod_signals.append('production deployments')
-    if 'a/b'         in desc_text: prod_signals.append('A/B testing')
-    if 'embedding'   in desc_text: prod_signals.append('embedding systems')
-    if 'retrieval'   in desc_text: prod_signals.append('retrieval pipelines')
-    if 'ranking'     in desc_text: prod_signals.append('ranking models')
-    if 'vector'      in desc_text: prod_signals.append('vector search')
-    if 'deployed'    in desc_text: prod_signals.append('deployed models')
-    if 'ndcg'        in desc_text: prod_signals.append('NDCG optimization')
-
-    prod_str = ('; ' + ', '.join(prod_signals[:2])) if prod_signals else ''
-
-    # -- Honest concerns (only surfaced for rank > 10) ------------------------
-    concerns = []
-    if yoe < 5:
-        concerns.append(f"below target experience ({yoe:.1f} yrs)")
-    if yoe > 12:
-        concerns.append(f"may prefer strategic over hands-on ({yoe:.0f}+ yrs)")
-    if notice > 90:
-        concerns.append(f"long notice period ({notice} days)")
-    if not open_flag:
-        concerns.append('passive candidate')
-    if response < 0.3:
-        concerns.append(f"low response rate ({response:.0%})")
-
-    concern_str = (f"; concern: {concerns[0]}") if concerns and rank > 10 else ''
-
+    
+    # Career production signals
+    desc = ' '.join((ch.get('description','')) for ch in 
+                    (raw_candidate.get('career_history') or [])[:2]).lower()
+    sigs = []
+    if 'production' in desc: sigs.append('production deployments')
+    if 'a/b' in desc: sigs.append('A/B testing')
+    if 'embedding' in desc: sigs.append('embedding systems')
+    if 'retrieval' in desc: sigs.append('retrieval pipelines')
+    if 'ranking' in desc: sigs.append('ranking models')
+    if 'vector' in desc: sigs.append('vector search')
+    prod_str = ('; evidence of: ' + ', '.join(sigs[:2])) if sigs else ''
+    
+    # Vary opener by rank band — avoids identical starts
     company_str = f" at {company}" if company else ''
-    reasoning = (
-        f"{title} with {yoe:.1f} yrs{company_str}"
-        f"; skills: {skill_str}{prod_str}"
-        f"; {open_str}, {loc}, {response:.0%} response rate"
-        f"{concern_str}."
-    )
-    return reasoning[:300]
+    active_str = 'actively seeking' if open_flag else 'passive'
+    
+    if rank <= 3:
+        opener = f"Strong match: {title} ({yoe:.1f} yrs{company_str})"
+    elif rank <= 10:
+        opener = f"{title} with {yoe:.1f} yrs{company_str}"
+    elif rank <= 30:
+        opener = f"{yoe:.1f}-year {title}{company_str}"
+    elif rank <= 60:
+        opener = f"Moderate fit — {title}, {yoe:.1f} yrs{company_str}"
+    else:
+        opener = f"Borderline — {title} ({yoe:.1f} yrs{company_str})"
+    
+    # Honest concerns for lower ranks
+    concerns = []
+    if yoe < 5: concerns.append(f"below target exp ({yoe:.1f} yrs)")
+    if yoe > 12: concerns.append(f"over-experienced ({yoe:.0f} yrs)")
+    if notice > 90: concerns.append(f"notice {notice}d")
+    if not open_flag: concerns.append('passive')
+    if response < 0.3: concerns.append(f"low response ({response:.0%})")
+    concern_str = ('; concern: ' + concerns[0]) if concerns and rank > 10 else ''
+    
+    return f"{opener}; skills: {skill_str}{prod_str}; {active_str}, {loc}, {response:.0%} response rate{concern_str}."[:300]
 
 
 
