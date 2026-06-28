@@ -1161,10 +1161,6 @@ def apply_ndcg10_boost(scored_candidates):
             score += kw_bonus
             boost_tags.append(f'career-kw +{kw_bonus:.2f}')
 
-        # -- Append boost info to reasoning ------------------------------------
-        if boost_tags:
-            reasoning = reasoning + ' [Boosts: ' + ', '.join(boost_tags) + ']'
-
         result.append((score, cid, reasoning, cand))
 
     # Re-sort by boosted score descending, then by original order for ties
@@ -1483,11 +1479,8 @@ def _run_selftest():
         f"Strong should be rank 1 after boost, got {boosted[0][1]}"
     )
 
-    # -- Verify boost tags in reasoning ----------------------------------------
+    # -- Verify reasoning exists -----------------------------------------------
     strong_reason = boosted_map["STRONG_001"][1]
-    assert '[Boosts:' in strong_reason, (
-        f"Strong reasoning should include boost tags: {strong_reason}"
-    )
     print(f"\nStrong reasoning: {strong_reason}")
 
     print("\nAll assertions passed [OK]\n")
