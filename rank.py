@@ -1112,8 +1112,8 @@ def apply_ndcg10_boost(scored_candidates):
                 score *= 0.30
                 boost_tags.append('career-pivot penalty')
 
-        # -- BOOSTS (top 50 only) ----------------------------------------------
-        if idx < 50:
+        # -- BOOSTS (top 500 only) ---------------------------------------------
+        if idx < 500:
             # 1. Title exact match boost
             if current_title in _TITLE_EXACT_BOOST_SET:
                 score *= 1.08
@@ -1173,7 +1173,7 @@ def apply_ndcg10_boost(scored_candidates):
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 TOP_N = 100
-HEAP_POOL = 500    # keep top-500 in heap so boost layer has room to re-order
+HEAP_POOL = 2000   # CRITICAL: need larger pool for boost re-ordering
 
 
 def main():
