@@ -1262,14 +1262,31 @@ def main():
     print(f"[rank.py] Applying NDCG@10 boost layer to top {len(pool_for_boost)}...", flush=True)
     boosted = apply_ndcg10_boost(pool_for_boost)
 
-    # -- Validate: scores must be non-increasing -------------------------------
-    scores = [s for s, *_ in boosted]
-    if scores and scores[0] > 0:
-        sf = 0.98 / scores[0]
-        scores = [min(0.99, s * sf) for s in scores]
-    for i in range(1, len(scores)):
-        if scores[i] > scores[i - 1] + 1e-9:
-            scores[i] = scores[i - 1]
+    def stretch_scores(raw_scores):
+        """Stretch scores to full [0.40, 0.98] range with exponential curve."""
+        if not raw_scores: return raw_scores
+        mn, mx = min(raw_scores), max(raw_scores)
+        if mx == mn: return [0.98] * len(raw_scores)
+        
+        TARGET_MIN, TARGET_MAX = 0.40, 0.98
+        stretched = []
+        for s in raw_scores:
+            # Linear normalize to [0,1]
+            norm = (s - mn) / (mx - mn)
+            # Exponential curve: top candidates separate more
+            curved = norm ** 0.6
+            # Map to target range
+            final = TARGET_MIN + curved * (TARGET_MAX - TARGET_MIN)
+            stretched.append(final)
+        
+        # Enforce strictly non-increasing
+        for i in range(1, len(stretched)):
+            if stretched[i] > stretched[i-1] - 0.0001:
+                stretched[i] = stretched[i-1] - 0.0001
+        return stretched
+
+    scores_raw = [s for s, *_ in boosted]
+    scores = stretch_scores(scores_raw)
 
     # -- Write submission.csv --------------------------------------------------
     output_path.parent.mkdir(parents=True, exist_ok=True)
