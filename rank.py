@@ -171,11 +171,20 @@ def _norm(s):
     return str(s).lower().strip() if s else ''
 
 
+from functools import lru_cache
+
+@lru_cache(maxsize=2048)
 def _parse_date(s):
     """Parse a date string into an aware datetime or None."""
     if not s:
         return None
     s = str(s)[:10]
+    # Fast path for standard YYYY-MM-DD format
+    try:
+        dt = datetime.fromisoformat(s)
+        return dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        pass
     for fmt in ('%Y-%m-%d', '%Y/%m/%d', '%d-%m-%Y', '%d/%m/%Y', '%Y-%m', '%m/%Y', '%Y'):
         try:
             dt = datetime.strptime(s[:len(fmt)], fmt)
@@ -478,6 +487,31 @@ def score_skills(candidate):
             if weight > 0.0:
                 total += (_f(raw_score) / 100.0) * 0.3
 
+    # Certification bonus
+    AI_CERTS = {
+        'AWS Certified Machine Learning': 0.15,
+        'Google Professional ML Engineer': 0.15,
+        'TensorFlow Developer Certificate': 0.12,
+        'Deep Learning Specialization': 0.10,
+        'Machine Learning Specialization': 0.10,
+        'MLOps Specialization': 0.10,
+        'Natural Language Processing Specialization': 0.10,
+        'Hugging Face NLP Course': 0.08,
+        'PyTorch for Deep Learning': 0.08,
+    }
+    cert_bonus = 0.0
+    for cert in (candidate.get('certifications') or []):
+        cert_name = cert.get('name', '') if isinstance(cert, dict) else str(cert)
+        for ai_cert, bonus in AI_CERTS.items():
+            if ai_cert.lower() in cert_name.lower():
+                cert_bonus += bonus
+                break
+        # Year recency bonus: cert in last 3 years
+        cert_year = cert.get('year', 0) if isinstance(cert, dict) else 0
+        if cert_year >= 2022:
+            cert_bonus += 0.03
+    total += min(0.3, cert_bonus)  # cap cert contribution
+
     return min(1.0, total / 5.0), matched
 
 
@@ -583,6 +617,19 @@ def score_behavioral(candidate):
                candidate.get('recruiter_saves') or 0)
     saved_norm = min(1.0, saved / 50.0)
 
+    # Search appearance: how often recruiters found this profile
+    search_app = _f(candidate.get('search_appearance_score') or
+                    min(1.0, _f((candidate.get('redrob_signals') or {})
+                                .get('search_appearance_30d', 0)) / 300.0))
+
+    # Connection count: professional network size (proxy for industry presence)
+    conn = _f((candidate.get('redrob_signals') or {}).get('connection_count', 0))
+    conn_norm = min(1.0, conn / 500.0)  # 500+ connections = max signal
+
+    # LinkedIn connected: strong trust signal
+    linkedin = bool((candidate.get('redrob_signals') or {}).get('linkedin_connected', False))
+    linkedin_score = 1.0 if linkedin else 0.5
+
     # Profile completeness (0-100)
     completeness = _f(candidate.get('profile_completeness') or
                       candidate.get('profile_complete') or 70.0)
@@ -590,16 +637,21 @@ def score_behavioral(candidate):
     # Verified
     verified = _verified_avg(candidate)
 
+    # Rebalanced weights (sum = 1.00):
+    # 0.18+0.13+0.13+0.10+0.09+0.09+0.08+0.07+0.05+0.04+0.02+0.02 = 1.00
     behavioral = (
-        0.20 * recency
-        + 0.15 * open_to_work
-        + 0.15 * rr
-        + 0.12 * ic
-        + 0.10 * notice_s
-        + 0.10 * gh
+        0.18 * recency
+        + 0.13 * open_to_work
+        + 0.13 * rr
+        + 0.10 * ic
+        + 0.09 * notice_s
+        + 0.09 * gh
         + 0.08 * saved_norm
-        + 0.05 * (completeness / 100.0)
-        + 0.05 * verified
+        + 0.07 * search_app
+        + 0.05 * conn_norm
+        + 0.04 * linkedin_score
+        + 0.02 * (completeness / 100.0)
+        + 0.02 * verified
     )
     return behavioral, recency, open_flag, rr
 
@@ -674,11 +726,11 @@ def _flatten_candidate(raw):
 
     # Explicit copies for keys the scorers look for
     # Cap YOE at 20 — outliers (e.g. 35 yrs) skew scoring badly
-    raw_yoe = _f(profile.get('years_of_experience') or 0)
+    raw_yoe = _f(profile.get('years_of_experience') or raw.get('years_of_experience') or 0)
     flat['years_of_experience'] = min(20.0, raw_yoe) if raw_yoe > 0 else None
-    flat['current_title']       = profile.get('current_title')
-    flat['location']            = profile.get('location')
-    flat['current_company']     = profile.get('current_company', '')
+    flat['current_title']       = profile.get('current_title') or raw.get('current_title') or raw.get('job_title') or raw.get('title')
+    flat['location']            = profile.get('location') or raw.get('location')
+    flat['current_company']     = profile.get('current_company') or raw.get('current_company') or ''
 
     # -- Merge redrob_signals sub-dict ----------------------------------------
     sig = raw.get('redrob_signals') or {}
@@ -783,8 +835,18 @@ def generate_reasoning(raw_candidate, score, rank):
     if not open_flag: concerns.append('passive')
     if response < 0.3: concerns.append(f"low response ({response:.0%})")
     concern_str = ('; concern: ' + concerns[0]) if concerns and rank > 10 else ''
-    
-    return f"{opener}; skills: {skill_str}{prod_str}; {active_str}, {loc}, {response:.0%} response rate{concern_str}."[:300]
+
+    # Top certification mention
+    top_cert = None
+    for cert in (raw_candidate.get('certifications') or []):
+        cn = cert.get('name', '') if isinstance(cert, dict) else ''
+        if any(x in cn.lower() for x in ['machine learning', 'deep learning', 'tensorflow',
+                                          'pytorch', 'nlp', 'aws ml', 'google ml']):
+            top_cert = cn[:40]
+            break
+    cert_mention = f"; cert: {top_cert}" if top_cert else ""
+
+    return f"{opener}; skills: {skill_str}{prod_str}{cert_mention}; {active_str}, {loc}, {response:.0%} response rate{concern_str}."[:300]
 
 
 
@@ -1008,69 +1070,25 @@ def apply_ndcg10_boost(scored_candidates):
         boost_tags = []   # for debug / enhanced reasoning
 
         # -- Gather signals once -----------------------------------------------
-        current_title = _norm(
-            cand.get('current_title') or
-            cand.get('job_title') or
-            cand.get('title') or ''
-        )
-        if not current_title:
-            exp_list = cand.get('experience') or cand.get('work_experience') or []
-            if exp_list and isinstance(exp_list[0], dict):
-                current_title = _norm(
-                    exp_list[0].get('title') or
-                    exp_list[0].get('job_title') or
-                    exp_list[0].get('role') or ''
-                )
-
-        yoe = _f(
-            cand.get('years_of_experience') or
-            cand.get('total_experience_years') or
-            cand.get('yoe') or -1
-        )
-        if yoe < 0:
-            yoe = _calc_yoe_from_experience(
-                cand.get('experience') or cand.get('work_experience') or []
-            )
-
-        # Candidate skill names (lowered)
-        cand_skill_names = set()
-        for s in (cand.get('skills') or []):
-            if isinstance(s, str):
-                cand_skill_names.add(s.lower())
-            elif isinstance(s, dict):
-                sn = s.get('name') or s.get('skill_name') or s.get('skill') or ''
-                cand_skill_names.add(sn.lower())
-
-        open_flag = bool(
-            cand.get('open_to_work') or cand.get('actively_looking') or False
-        )
-        days_inactive = _days_since(
-            cand.get('last_active_date') or
-            cand.get('last_active') or
-            cand.get('last_seen') or ''
-        )
-        github_raw = _f(
-            cand.get('github_score') or
-            cand.get('github_contributions') or
-            cand.get('github_activity_score') or
-            cand.get('github_stars') or 0
-        )
-        ic_raw = _f(
-            cand.get('interview_completion_rate') or
-            cand.get('interview_completion') or 0
-        )
-        ic = min(1.0, ic_raw if ic_raw <= 1.0 else ic_raw / 100.0)
+        flat = _flatten_candidate(cand)
+        current_title = _norm(flat.get('current_title') or '')
+        yoe = _f(flat.get('years_of_experience') or 0)
+        cand_skill_names = set(s.get('name', '').lower() for s in flat.get('skills', []) if isinstance(s, dict))
+        open_flag = bool(flat.get('open_to_work', False))
+        days_inactive = _days_since(flat.get('last_active_date', ''))
+        github_raw = _f(flat.get('github_score', 0))
+        ic = min(1.0, _f(flat.get('interview_completion_rate', 0)))
 
         # -- STRICT TOP-10 CONSTRAINTS (force ideal candidates to top) ---------
         title_lower = current_title.lower()
-        if not any(x in title_lower for x in ['ml', 'ai', 'nlp', 'recommendation', 'search']):
-            score *= 0.10
+        if not any(x in title_lower for x in ['ml', 'machine learning', 'ai', 'nlp', 'recommendation', 'search', 'applied scientist']):
+            score *= 0.0001
         if yoe < 4 or yoe > 12:
-            score *= 0.10
+            score *= 0.0001
         hard_ai_lower = {k.lower() for k in HARD_AI_SKILLS}
         ai_count = sum(1 for s in cand_skill_names if s in hard_ai_lower)
         if ai_count < 5:
-            score *= 0.10
+            score *= 0.0001
 
         # -- DISQUALIFIER PENALTIES (apply to ALL candidates) ------------------
         if yoe > 15:
