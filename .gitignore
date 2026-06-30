@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environment
+venv/
+.venv/
+env/
+.env/
+
+# Test / coverage caches
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+coverage.xml
+
+# Large data files — never commit to git
+candidates.jsonl
+candidates.db
+
+# Build artefacts
+*.zip
+dist/
+build/
+*.egg-info/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Gradio / HuggingFace cache
+gradio_cached_examples/
+flagged/
+
+# Docker not used — CPU-only stdlib pipeline
+# docker-compose.yml and Dockerfile deleted
