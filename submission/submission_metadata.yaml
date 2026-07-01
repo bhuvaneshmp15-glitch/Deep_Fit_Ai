@@ -1,9 +1,14 @@
+team_name: "DeepFit AI"
+primary_contact:
+  name: "Bhuvanesh MP"
+  email: "bhuvanesh.mp@example.com"
+github_repo: "https://github.com/bhuvanesh-mp/ai-candidate-ranking"
 reproduce_command: "python rank.py candidates.jsonl submission.csv"
 compute:
   uses_gpu_for_inference: false
   has_network_during_ranking: false
   pre_computation_required: false
 ai_tools_used: ["Gemini"]
-sandbox_link: "https://huggingface.co/spaces/YOUR_HF_USERNAME/redrob-ranker-demo"
+sandbox_link: "https://huggingface.co/spaces/bhuvanesh-mp/redrob-ranker-demo"
 architecture: "src/ranker/ modular pipeline — config / features / behavioral / honeypot / scorer / reasoning / schema / io_utils"
 primary_signal: "career description text (not skill tags) — keyword stuffers score 0"
