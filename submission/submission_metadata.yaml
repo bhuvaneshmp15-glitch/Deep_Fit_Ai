@@ -1,0 +1,9 @@
+reproduce_command: "python rank.py candidates.jsonl submission.csv"
+compute:
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: false
+ai_tools_used: ["Gemini"]
+sandbox_link: "https://huggingface.co/spaces/YOUR_HF_USERNAME/redrob-ranker-demo"
+architecture: "src/ranker/ modular pipeline — config / features / behavioral / honeypot / scorer / reasoning / schema / io_utils"
+primary_signal: "career description text (not skill tags) — keyword stuffers score 0"
