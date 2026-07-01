@@ -1,0 +1,232 @@
+{
+  "grade_distribution": {
+    "0": 250,
+    "1": 150,
+    "2": 75,
+    "3": 25
+  },
+  "sweep": {
+    "configs": {
+      "production": {
+        "weights": {
+          "role_substance": 0.28,
+          "skill_corroboration": 0.08,
+          "exp_score": 0.22,
+          "behav_score": 0.18,
+          "nlp_ir_signal": 0.08,
+          "product_score": 0.08,
+          "edu_score": 0.05,
+          "loc_score": 0.03
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 1.0,
+          "val_precision@10": 1.0
+        }
+      },
+      "substance_heavy": {
+        "weights": {
+          "role_substance": 0.4,
+          "skill_corroboration": 0.1,
+          "exp_score": 0.18,
+          "behav_score": 0.12,
+          "nlp_ir_signal": 0.08,
+          "product_score": 0.06,
+          "edu_score": 0.04,
+          "loc_score": 0.02
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 1.0,
+          "val_precision@10": 1.0
+        }
+      },
+      "experience_heavy": {
+        "weights": {
+          "role_substance": 0.15,
+          "skill_corroboration": 0.05,
+          "exp_score": 0.4,
+          "behav_score": 0.2,
+          "nlp_ir_signal": 0.05,
+          "product_score": 0.05,
+          "edu_score": 0.07,
+          "loc_score": 0.03
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 0.9636452638863133,
+          "val_precision@10": 1.0
+        }
+      },
+      "behavioral_heavy": {
+        "weights": {
+          "role_substance": 0.2,
+          "skill_corroboration": 0.05,
+          "exp_score": 0.18,
+          "behav_score": 0.35,
+          "nlp_ir_signal": 0.08,
+          "product_score": 0.06,
+          "edu_score": 0.05,
+          "loc_score": 0.03
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 1.0,
+          "val_precision@10": 1.0
+        }
+      },
+      "jd_signals_heavy": {
+        "weights": {
+          "role_substance": 0.25,
+          "skill_corroboration": 0.08,
+          "exp_score": 0.2,
+          "behav_score": 0.12,
+          "nlp_ir_signal": 0.16,
+          "product_score": 0.12,
+          "edu_score": 0.04,
+          "loc_score": 0.03
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 1.0,
+          "val_precision@10": 1.0
+        }
+      },
+      "uniform_baseline": {
+        "weights": {
+          "role_substance": 0.125,
+          "skill_corroboration": 0.125,
+          "exp_score": 0.125,
+          "behav_score": 0.125,
+          "nlp_ir_signal": 0.125,
+          "product_score": 0.125,
+          "edu_score": 0.125,
+          "loc_score": 0.125
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 0.9580777588003657,
+          "val_precision@10": 1.0
+        }
+      },
+      "ablation_no_substance": {
+        "weights": {
+          "role_substance": 0.0,
+          "skill_corroboration": 0.0,
+          "exp_score": 0.4,
+          "behav_score": 0.3,
+          "nlp_ir_signal": 0.1,
+          "product_score": 0.1,
+          "edu_score": 0.06,
+          "loc_score": 0.04
+        },
+        "metrics": {
+          "val_ndcg@5": 0.9165323715184533,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 0.8683006801367332,
+          "val_precision@10": 1.0
+        }
+      },
+      "ablation_no_jd": {
+        "weights": {
+          "role_substance": 0.35,
+          "skill_corroboration": 0.1,
+          "exp_score": 0.28,
+          "behav_score": 0.2,
+          "nlp_ir_signal": 0.0,
+          "product_score": 0.0,
+          "edu_score": 0.05,
+          "loc_score": 0.02
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 1.0,
+          "val_precision@10": 1.0
+        }
+      },
+      "minimal_text_only": {
+        "weights": {
+          "role_substance": 0.5,
+          "skill_corroboration": 0.1,
+          "exp_score": 0.2,
+          "behav_score": 0.05,
+          "nlp_ir_signal": 0.1,
+          "product_score": 0.05,
+          "edu_score": 0.0,
+          "loc_score": 0.0
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 1.0,
+          "val_precision@10": 1.0
+        }
+      },
+      "edu_loc_premium": {
+        "weights": {
+          "role_substance": 0.22,
+          "skill_corroboration": 0.08,
+          "exp_score": 0.22,
+          "behav_score": 0.15,
+          "nlp_ir_signal": 0.08,
+          "product_score": 0.08,
+          "edu_score": 0.12,
+          "loc_score": 0.05
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 1.0,
+          "val_precision@10": 1.0
+        }
+      },
+      "substance_exp_balanced": {
+        "weights": {
+          "role_substance": 0.32,
+          "skill_corroboration": 0.08,
+          "exp_score": 0.3,
+          "behav_score": 0.12,
+          "nlp_ir_signal": 0.08,
+          "product_score": 0.06,
+          "edu_score": 0.03,
+          "loc_score": 0.01
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 1.0,
+          "val_precision@10": 1.0
+        }
+      },
+      "corroboration_amplified": {
+        "weights": {
+          "role_substance": 0.25,
+          "skill_corroboration": 0.18,
+          "exp_score": 0.22,
+          "behav_score": 0.15,
+          "nlp_ir_signal": 0.08,
+          "product_score": 0.06,
+          "edu_score": 0.04,
+          "loc_score": 0.02
+        },
+        "metrics": {
+          "val_ndcg@5": 1.0,
+          "val_precision@5": 1.0,
+          "val_ndcg@10": 1.0,
+          "val_precision@10": 1.0
+        }
+      }
+    },
+    "best_config": "production",
+    "best_val_ndcg10": 1.0,
+    "n_val": 251,
+    "n_train": 249
+  }
+}
