@@ -1,0 +1,44 @@
+# ── Core web framework ────────────────────────────────────────────────────────
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+
+# ── Vector DB & embeddings ────────────────────────────────────────────────────
+qdrant-client
+sentence-transformers
+
+# ── Sparse retrieval ──────────────────────────────────────────────────────────
+rank_bm25
+
+# ── ML / DL ───────────────────────────────────────────────────────────────────
+torch
+transformers
+scikit-learn
+numpy
+pandas
+
+# ── Graph DB ──────────────────────────────────────────────────────────────────
+neo4j
+
+# ── Fairness ──────────────────────────────────────────────────────────────────
+fairlearn
+
+# ── PDF parsing & NLP ────────────────────────────────────────────────────────
+pdfplumber
+spacy
+python-dateutil
+
+# ── LLM API ───────────────────────────────────────────────────────────────────
+openai
+
+# ── Async database ────────────────────────────────────────────────────────────
+aiosqlite
+httpx
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest
+pytest-asyncio
+
+# UI
+gradio
